@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# THIS IS FOR RUNNING USUAL CLI APP COMMANDS
+
+# ./cli up - runs frontend and api server instances on localhost:8080 (8081, 8082)
+# ./cli test {!app} {folder} {Test.php} {extra option for codecept (e.g. -vv or --debug} runs tests for app (api/frontend/backend - required)
+
+COMMAND=$1;
+PARAM1=$2;
+PARAM2=$3;
+PARAM3=$4;
+PARAM4=$5
+APP=$PARAM1;
+DIR=$( cd "$( dirname $0 )" && pwd );
+
+case "$COMMAND" in
+    init)
+        chmod 0777 app/runtime
+        chmod 0777 web/assets
+        chmod -R 0777 web/files
+        cp -n app/config/local.php.example app/config/local.php
+        chmod +x yii
+        php composer.phar install --prefer-dist
+        ./yii migrate --interactive=0
+    ;;
+    up)
+        fuser -k 8000/tcp
+        python3 manage.py runserver &
+#        python3 manage.py runserver > /dev/null 2>&1 &
+    ;;
+    down)
+        fuser -k 8000/tcp
+    ;;
+    update)
+        python3 manage.py migrate
+    ;;
+    dev)
+        python3 manage.py makemigrations
+        python3 manage.py migrate
+    ;;
+    gitclean)
+        # removes local branches that were removed from origin
+        git fetch --prune
+        git fetch
+        git checkout master
+        git pull
+        git branch -d $(git branch --merged)
+    ;;
+    clean)
+        # removes local files
+        rm -rf $DIR/app/runtime/debug/*
+        rm -rf $DIR/app/runtime/mail/*
+        rm -rf $DIR/web/assets/*
+        rm -rf $DIR/tests/codeception/_output/*
+    ;;
+    create)
+        python3 manage.py startapp $PARAM1
+    ;;
+    *)
+        echo "Available commands: update, dev, test, clean, up"
+    ;;
+esac
